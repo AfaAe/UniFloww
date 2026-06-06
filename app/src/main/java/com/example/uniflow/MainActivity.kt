@@ -1,10 +1,10 @@
 package com.example.uniflow
 
 import android.content.Intent
+//import android.graphics.drawable.Icon
+import androidx.compose.material3.Icon
 import android.net.Uri
 import android.os.Bundle
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -25,43 +25,42 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.input.InputTransformation
-import androidx.compose.foundation.text.input.maxLength
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import com.example.uniflow.ui.theme.UniFlowTheme
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import androidx.core.net.toUri
-import java.time.Month
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,15 +68,86 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             UniFlowTheme {
-                //Scaffold( modifier = Modifier.fillMaxSize() ) { innerPadding ->
-                FrBackgroundYo {
-                    AddingScreen()
+                val pagerState = rememberPagerState(initialPage = 2, pageCount = { 3 })
+                val coroutineScope = rememberCoroutineScope()
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    bottomBar = {
+                        BottomAppBar(containerColor = Color(122, 105, 99)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceAround
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(0)
+                                        }
+                                    },
+                                    modifier = Modifier.size(80.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(R.drawable.settingsic),
+                                        contentDescription = "Настройки",
+                                        modifier = Modifier.size(60.dp),
+                                        tint = if (pagerState.currentPage == 0) Color(208,255,255) else Color.White
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(1)
+                                        }
+                                    },
+                                    modifier = Modifier.size(80.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(R.drawable.outline_add_24),
+                                        contentDescription = "Добавление задачи",
+                                        modifier = Modifier.size(60.dp),
+                                        tint = if (pagerState.currentPage == 1) Color(208,255,255) else Color.White
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(2)
+                                        }
+                                    },
+                                    modifier = Modifier.size(80.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(R.drawable.boxie),
+                                        contentDescription = "Календарь",
+                                        modifier = Modifier.size(60.dp),
+                                        tint = if (pagerState.currentPage == 2) Color(208,255,255) else Color.White
+                                    )
+                                }
+                            }
+                        }
+                    }
+                ) { innerPadding ->
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                    ) { page ->
+                        when (page) {
+                            0 -> FrBackgroundYo { SettingsScreen() }
+                            1 -> FrBackgroundYo { AddingScreen() }
+                            2 -> FrBackgroundYo { CalendarScreen() }
+                        }
+                    }
                 }
             }
         }
     }
 }
-
 
 @Composable
 //функции для экранов
@@ -154,6 +224,13 @@ fun SettingsScreen(){
         ) {
             Text(text = "Включить уведомления", fontSize = 30.sp, textAlign = TextAlign.Center, lineHeight = 31.sp)
         }
+            Text(
+                text = "версия\n1.0",
+                fontSize = 20.sp,
+                modifier = Modifier.fillMaxWidth().padding(top = 430.dp),
+                textAlign = TextAlign.Center,
+                color = Color(127,112,107),
+            )
     }
 }
 
@@ -276,7 +353,7 @@ fun CalendarScreen(){
             )
         ) {
             Text(
-                text = "ВЫСТАВЛЯЙТЕ ДАТУ СООТВЕТСТВУЮЩУЮ НЫНЕШНЕМУ ГОДУ!",
+                text = "Ох,этот экран будет долго делать",
                 fontSize = 20.sp,
                 color = Color.Black,
             )
