@@ -1,9 +1,16 @@
 package com.example.uniflow
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +23,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -23,7 +32,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -32,19 +40,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.example.uniflow.ui.theme.UniFlowTheme
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import java.util.Locale
+import androidx.core.net.toUri
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,13 +66,34 @@ class MainActivity : ComponentActivity() {
             UniFlowTheme {
                 //Scaffold( modifier = Modifier.fillMaxSize() ) { innerPadding ->
                 FrBackgroundYo {
-                    AddingScreen()
+                    SettingsScreen()
                 }
             }
         }
     }
 }
 
+
+@Composable
+//функции для экранов
+fun remeNotifPerm(
+    onResult: (Boolean) -> Unit): () -> Unit {
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean -> onResult(isGranted) }
+    return remember {
+        {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                launcher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                onResult(true)
+            }
+        }
+    }
+}
+
+
+//экраны
 @Composable
 fun FrBackgroundYo(content: @Composable () -> Unit){
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFA89A95)), contentAlignment = Alignment.Center){
@@ -75,7 +108,15 @@ fun FrBackgroundYo(content: @Composable () -> Unit){
 
 @Composable
 fun SettingsScreen(){
-    Column(modifier = Modifier.fillMaxSize().padding(top = 24.dp), verticalArrangement = Arrangement.Top) {
+    val context = LocalContext.current
+    val reqPermission = remeNotifPerm { isGranted ->
+        if (isGranted) {
+            Toast.makeText(context, "Уведомления включены", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Уведомления выключены.", Toast.LENGTH_SHORT).show()
+        }}
+
+        Column(modifier = Modifier.fillMaxSize().padding(top = 24.dp), verticalArrangement = Arrangement.Top) {
         Button(
             modifier = Modifier.fillMaxWidth().height(75.dp).padding(horizontal = 16.dp),
             shape = RoundedCornerShape(15),
@@ -89,7 +130,11 @@ fun SettingsScreen(){
         Button(
             modifier = Modifier.fillMaxWidth().height(75.dp).padding(horizontal = 16.dp),
             shape = RoundedCornerShape(15),
-            onClick = { /* бебебе */ },
+            onClick = {
+                val webpage: Uri = Uri.parse("https://github.com/AfaAe/UniFloww")
+                val intent = Intent(Intent.ACTION_VIEW, webpage)
+                context.startActivity(intent)
+            },
             colors = ButtonDefaults.buttonColors(Color(0xFFD9D9D9),contentColor = Color.Black)
 
         ){
@@ -99,7 +144,7 @@ fun SettingsScreen(){
         Button(
             modifier = Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 16.dp),
             shape = RoundedCornerShape(15),
-            onClick = { /* бебебе */ },
+            onClick = {reqPermission()},
             colors = ButtonDefaults.buttonColors(Color(0xFFD9D9D9),contentColor = Color.Black)
 
         ) {
@@ -107,7 +152,6 @@ fun SettingsScreen(){
         }
     }
 }
-
 
 @Composable
 fun AddingScreen(){
@@ -139,34 +183,73 @@ fun AddingScreen(){
             onValueChange = { newText -> UsTask.value = newText },
             textStyle = TextStyle(fontSize = 25.sp),
             shape = RoundedCornerShape(15),
-            modifier = Modifier.padding(start = 16.dp, top = 30.dp, end = 16.dp).fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 30.dp, end = 16.dp),
             colors = TextFieldDefaults.colors(
                 unfocusedContainerColor = Color(0xFFD9D9D9),
                 focusedContainerColor = Color(0xFFD9D9D9)
             )
         )
-        Row {
+        Row (modifier = Modifier.padding(start = 16.dp, top = 30.dp, end = 50.dp)){
             TextField(
                 value = DateTask.value,
                 onValueChange = { newText -> DateTask.value = newText },
                 textStyle = TextStyle(fontSize = 25.sp),
                 shape = RoundedCornerShape(15),
-                modifier = Modifier.padding(start = 16.dp, top = 30.dp, end = 290.dp),
+                modifier = Modifier.width(100.dp),
                 colors = TextFieldDefaults.colors(
                     unfocusedContainerColor = Color(0xFFD9D9D9),
                     focusedContainerColor = Color(0xFFD9D9D9)
                 )
             )
             Button(
-                modifier = Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 16.dp),
+                modifier = Modifier.size(width = 85.dp, height = 65.dp).padding(start = 16.dp),
                 shape = RoundedCornerShape(15),
                 onClick = { /* бебебе */ },
                 colors = ButtonDefaults.buttonColors(Color(0xFFD9D9D9),contentColor = Color.Black)
-
             ) {
-                Text(text = "+", fontSize = 30.sp, textAlign = TextAlign.Center, lineHeight = 31.sp)
+                Text(text = "✓", fontSize = 30.sp, textAlign = TextAlign.Center, color = Color(146,146,146), fontWeight = FontWeight.Light)
+                /*Image(
+                    imageVector = ImageVector.vectorResource(R.drawable.galochka3),
+                    modifier = Modifier.size(30.dp),
+                    contentDescription = "Добавить время"
+                )*/
             }
-            //ВНИМАНИЕ!!!!!Не забудь поправить кнопку,её нет на экране
+        }
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(top = 50.dp)) {
+            Button(
+                modifier = Modifier.size(150.dp),
+                shape = RoundedCornerShape(15),
+                onClick = { /* бебебе */ },
+                colors = ButtonDefaults.buttonColors(Color(208, 255, 255), contentColor = Color.Black)
+            ) {
+                Text(text = "+", fontSize = 100.sp, textAlign = TextAlign.Center, color = Color(146,179,179), fontWeight = FontWeight.Light)
+            }
+        }
+        Box(modifier = Modifier.fillMaxSize().padding(start = 125.dp, top = 40.dp, end = 30.dp).background(Color(0xFFD9D9D9))) {
+            Text(
+                text = "ВЫСТАВЛЯЙТЕ ДАТУ СООТВЕТСТВУЮЩУЮ НЫНЕШНЕМУ ГОДУ!",
+                fontSize = 20.sp,
+                textAlign = TextAlign.Start,
+                color = Color.Black,
+            )
+        }
+    }
+}
+
+@Composable
+fun CalendarScreen(){
+    Column(modifier = Modifier.fillMaxSize().padding(top = 24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Top) {
+        Box(
+            modifier = Modifier.padding(start = 16.dp, top = 24.dp, end = 16.dp).background(
+                Color(0xFFD9D9D9),
+                shape = RoundedCornerShape(15),
+            )
+        ) {
+            Text(
+                text = "ВЫСТАВЛЯЙТЕ ДАТУ СООТВЕТСТВУЮЩУЮ НЫНЕШНЕМУ ГОДУ!",
+                fontSize = 20.sp,
+                color = Color.Black,
+            )
         }
     }
 }
