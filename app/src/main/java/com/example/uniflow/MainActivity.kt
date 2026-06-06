@@ -234,7 +234,7 @@ fun AddingScreen(){
                         UsDate.value = LocalDate.of(2026, DateTask2.value.toInt(), DateTask.value.toInt())
                     }
                 },
-                //КОГДА СДЕЛАЕШЬ ЛИСТЫ, СДЕЛАЙ ПРОВЕРКУ НА СУЩЕСТВОВАНИЕ КНОПКИ ПО АЙДИ!!!!!!
+                //КОГДА СДЕЛАЕШЬ ЛИСТЫ, СДЕЛАЙ ПРОВЕРКУ НА СУЩЕСТВОВАНИЕ КНОПКИ ПО АЙДИ!!!!!!!!!!
                 colors = ButtonDefaults.buttonColors(Color(0xFFD9D9D9),contentColor = Color.Black)
             ) {
                 Text(text = "✓", fontSize = 30.sp, textAlign = TextAlign.Center, color = Color(146,146,146), fontWeight = FontWeight.Light)
