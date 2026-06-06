@@ -27,6 +27,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.maxLength
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -48,6 +51,7 @@ import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,6 +61,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import androidx.core.net.toUri
+import java.time.Month
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,7 +71,7 @@ class MainActivity : ComponentActivity() {
             UniFlowTheme {
                 //Scaffold( modifier = Modifier.fillMaxSize() ) { innerPadding ->
                 FrBackgroundYo {
-                    SettingsScreen()
+                    AddingScreen()
                 }
             }
         }
@@ -91,7 +96,6 @@ fun remeNotifPerm(
         }
     }
 }
-
 
 //экраны
 @Composable
@@ -158,8 +162,13 @@ fun AddingScreen(){
     val currentDate = LocalDate.now()
     val dateFormat = DateTimeFormatter.ofPattern("d MMMM").withLocale(Locale("ru", "RU"))
     val formattedDate = currentDate.format(dateFormat)
+
+    val UsDate = remember{mutableStateOf(LocalDate.now())}
+    val formattedDate2 = UsDate.value.format(dateFormat)
+
     val UsTask = remember{mutableStateOf("")}
     val DateTask = remember{mutableStateOf("")}
+    val DateTask2 = remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize().padding(top = 24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Top) {
         Text(
@@ -171,7 +180,7 @@ fun AddingScreen(){
             fontWeight = FontWeight.Light
         )
         Text(
-            text = "Оповестить\n\n$formattedDate",
+            text = "Оповестить\n\n$formattedDate2",
             fontSize = 45.sp,
             modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
             textAlign = TextAlign.Center,
@@ -184,6 +193,7 @@ fun AddingScreen(){
             textStyle = TextStyle(fontSize = 25.sp),
             shape = RoundedCornerShape(15),
             modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 30.dp, end = 16.dp),
+            placeholder = { Text("Введите задачу...") },
             colors = TextFieldDefaults.colors(
                 unfocusedContainerColor = Color(0xFFD9D9D9),
                 focusedContainerColor = Color(0xFFD9D9D9)
@@ -192,10 +202,25 @@ fun AddingScreen(){
         Row (modifier = Modifier.padding(start = 16.dp, top = 30.dp, end = 50.dp)){
             TextField(
                 value = DateTask.value,
-                onValueChange = { newText -> DateTask.value = newText },
+                onValueChange = { newValue ->
+                    if(newValue.all {it.isDigit()}&&newValue.length<=2){ DateTask.value = newValue }},
                 textStyle = TextStyle(fontSize = 25.sp),
                 shape = RoundedCornerShape(15),
-                modifier = Modifier.width(100.dp),
+                modifier = Modifier.width(60.dp),
+                placeholder = { Text("ДД") },
+                colors = TextFieldDefaults.colors(
+                    unfocusedContainerColor = Color(0xFFD9D9D9),
+                    focusedContainerColor = Color(0xFFD9D9D9)
+                )
+            )
+            TextField(
+                value = DateTask2.value,
+                onValueChange = { newValue ->
+                    if(newValue.all {it.isDigit()}&&newValue.length<=2){ DateTask2.value = newValue }},
+                textStyle = TextStyle(fontSize = 25.sp),
+                shape = RoundedCornerShape(15),
+                modifier = Modifier.width(80.dp).padding(start = 16.dp),
+                placeholder = { Text("ММ") },
                 colors = TextFieldDefaults.colors(
                     unfocusedContainerColor = Color(0xFFD9D9D9),
                     focusedContainerColor = Color(0xFFD9D9D9)
@@ -204,7 +229,12 @@ fun AddingScreen(){
             Button(
                 modifier = Modifier.size(width = 85.dp, height = 65.dp).padding(start = 16.dp),
                 shape = RoundedCornerShape(15),
-                onClick = { /* бебебе */ },
+                onClick = {
+                    if (DateTask.value.toString().length == 2 && DateTask2.value.toString().length == 2) {
+                        UsDate.value = LocalDate.of(2026, DateTask2.value.toInt(), DateTask.value.toInt())
+                    }
+                },
+                //КОГДА СДЕЛАЕШЬ ЛИСТЫ, СДЕЛАЙ ПРОВЕРКУ НА СУЩЕСТВОВАНИЕ КНОПКИ ПО АЙДИ!!!!!!
                 colors = ButtonDefaults.buttonColors(Color(0xFFD9D9D9),contentColor = Color.Black)
             ) {
                 Text(text = "✓", fontSize = 30.sp, textAlign = TextAlign.Center, color = Color(146,146,146), fontWeight = FontWeight.Light)
