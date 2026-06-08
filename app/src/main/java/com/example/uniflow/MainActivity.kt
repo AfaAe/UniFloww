@@ -352,12 +352,46 @@ fun CalendarScreen(){
                 shape = RoundedCornerShape(15),
             )
         ) {
-            Text(
-                text = "Ох,этот экран будет долго делать",
-                fontSize = 20.sp,
-                color = Color.Black,
-            )
+
         }
+    }
+}
+
+//эт классы для 3 экрана
+data class Task(
+    val id: String = "",
+    val textTask: String = "",
+    var isCompleted: Boolean = false,
+    val date: LocalDate
+)
+
+data class TaskDay(
+    val date: LocalDate,
+    val tasks: MutableList<Task> = mutableListOf()
+) {
+
+    fun AddTask(task: Task) {
+        tasks.add(task)
+    }
+
+    fun DeleteTask(taskId: String) {
+        tasks.removeAll { it.id == taskId }
+    }
+
+    fun TaskStat(taskId: String) {
+        val task = tasks.find { it.id == taskId }
+        if (task != null) {
+            task.isCompleted = !task.isCompleted
+        }
+    }
+}
+
+val months: MutableList<TaskDay> = mutableListOf()
+
+@Composable
+fun AddingDaysToMonths() {
+    for (i in 1..12){
+
     }
 }
 
