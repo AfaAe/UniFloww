@@ -390,7 +390,7 @@ val months: MutableList<TaskDay> = mutableListOf()
 
 @Composable
 fun AddingDaysToMonths() {
-    for (i in 1..12){
+    for (i in 1..12) {
 
     }
 }
