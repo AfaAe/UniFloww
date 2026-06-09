@@ -345,7 +345,59 @@ fun AddingScreen(){
 
 @Composable
 fun CalendarScreen(){
+    val СurrentMonth = remember { mutableStateOf(LocalDate.now().monthValue) }
+    val MonthNames = listOf("Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь")
     Column(modifier = Modifier.fillMaxSize().padding(top = 24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Top) {
+        Row(modifier = Modifier.fillMaxWidth(),horizontalArrangement = Arrangement.Center) {
+            Box(modifier = Modifier.padding(top = 24.dp).size(300.dp, 50.dp).background(Color(208, 255, 255), shape = RoundedCornerShape(15))) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    IconButton(
+                        onClick = {
+                            if (СurrentMonth.value > 1) {
+                                СurrentMonth.value -= 1
+                            } else {
+                                СurrentMonth.value = 1
+                            }
+                        },
+                        modifier = Modifier.size(80.dp).padding(bottom = 5.dp)
+                    ) {
+                        Image(
+                            imageVector = ImageVector.vectorResource(R.drawable.polygon1),
+                            modifier = Modifier.size(30.dp),
+                            contentDescription = "Раннее"
+                        )
+                    }
+                    Text(
+                        text = MonthNames[СurrentMonth.value - 1],
+                        fontSize = 30.sp,
+                        textAlign = TextAlign.Center,
+                        color = Color(89, 125, 125),
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.size(150.dp,50.dp)
+                    )
+                    IconButton(
+                        onClick = {
+                            if (СurrentMonth.value < 12) {
+                                СurrentMonth.value += 1
+                            } else {
+                                СurrentMonth.value = 12
+                            }
+                        },
+                        modifier = Modifier.size(80.dp).padding(bottom = 5.dp)
+                    ) {
+                        Image(
+                            imageVector = ImageVector.vectorResource(R.drawable.polygon2),
+                            modifier = Modifier.size(30.dp),
+                            contentDescription = "Позднее"
+                        )
+                    }
+                }
+            }
+        }
         Box(
             modifier = Modifier.padding(start = 16.dp, top = 24.dp, end = 16.dp).background(
                 Color(0xFFD9D9D9),
@@ -357,16 +409,15 @@ fun CalendarScreen(){
     }
 }
 
-//эт классы для 3 экрана
+//эт классы и тд для 3 экрана
 data class Task(
     val id: String = "",
     val textTask: String = "",
     var isCompleted: Boolean = false,
-    val date: LocalDate
 )
 
 data class TaskDay(
-    val date: LocalDate,
+    val idD: Int,
     val tasks: MutableList<Task> = mutableListOf()
 ) {
 
@@ -386,12 +437,30 @@ data class TaskDay(
     }
 }
 
-val months: MutableList<TaskDay> = mutableListOf()
-
+val year: MutableList<List<TaskDay>> = mutableListOf()
 @Composable
 fun AddingDaysToMonths() {
     for (i in 1..12) {
-
+        val daysList = mutableListOf<TaskDay>()
+        if (i in setOf(1, 3, 5, 7, 8, 10, 12)){
+            for (j in 1..31) {
+                val taski = mutableListOf<Task>()
+                daysList.add(TaskDay(idD = j,taski))
+            }
+        }
+        else if (i in setOf(4, 6, 9, 11)){
+            for (j in 1..30) {
+                val taski = mutableListOf<Task>()
+                daysList.add(TaskDay(idD = j,taski))
+            }
+        }
+        else if(i == 2){
+            for (j in 1..28) {
+                val taski = mutableListOf<Task>()
+                daysList.add(TaskDay(idD = j,taski))
+            }
+        }
+        year.add(daysList)
     }
 }
 
