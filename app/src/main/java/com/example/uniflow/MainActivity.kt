@@ -30,18 +30,22 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -68,6 +72,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             UniFlowTheme {
+                if (year.isEmpty()) { AddingDaysToMonths()}
                 val pagerState = rememberPagerState(initialPage = 2, pageCount = { 3 })
                 val coroutineScope = rememberCoroutineScope()
                 Scaffold(
@@ -181,25 +186,58 @@ fun FrBackgroundYo(content: @Composable () -> Unit){
 }
 
 @Composable
-fun SettingsScreen(){
+fun SettingsScreen() {
+    var showClearDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val reqPermission = remeNotifPerm { isGranted ->
         if (isGranted) {
             Toast.makeText(context, "Уведомления включены", Toast.LENGTH_SHORT).show()
         } else {
             Toast.makeText(context, "Уведомления выключены.", Toast.LENGTH_SHORT).show()
-        }}
+        }
+    }
 
-        Column(modifier = Modifier.fillMaxSize().padding(top = 24.dp), verticalArrangement = Arrangement.Top) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(top = 24.dp),
+        verticalArrangement = Arrangement.Top
+    ) {
         Button(
             modifier = Modifier.fillMaxWidth().height(75.dp).padding(horizontal = 16.dp),
             shape = RoundedCornerShape(15),
-            onClick = { /* бебебе */ },
-            colors = ButtonDefaults.buttonColors(Color(0xFFD9D9D9),contentColor = Color.Black)
+            onClick = { showClearDialog = true },
+            colors = ButtonDefaults.buttonColors(Color(0xFFD9D9D9), contentColor = Color.Black)
 
         ) {
             Text(text = "Очистить задачи", fontSize = 30.sp, textAlign = TextAlign.Center)
         }
+        if (showClearDialog) {
+            AlertDialog(
+                onDismissRequest = { showClearDialog = false },
+                title = { Text("Подтверждение") },
+                text = { Text("Вы уверены, что хотите очистить все задачи?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            year.forEach { month ->
+                                month.forEach { taskDay ->
+                                    taskDay.tasks.clear()
+                                }
+                            }
+                            Toast.makeText(context, "Задачи очищены", Toast.LENGTH_SHORT).show()
+                            showClearDialog = false
+                        }
+                    ) {
+                        Text("Да")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showClearDialog = false }) {
+                        Text("Нет")
+                    }
+                }
+            )
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             modifier = Modifier.fillMaxWidth().height(75.dp).padding(horizontal = 16.dp),
@@ -209,28 +247,34 @@ fun SettingsScreen(){
                 val intent = Intent(Intent.ACTION_VIEW, webpage)
                 context.startActivity(intent)
             },
-            colors = ButtonDefaults.buttonColors(Color(0xFFD9D9D9),contentColor = Color.Black)
+            colors = ButtonDefaults.buttonColors(Color(0xFFD9D9D9), contentColor = Color.Black)
 
-        ){
+        ) {
             Text(text = "GitHub", fontSize = 30.sp, textAlign = TextAlign.Center)
         }
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             modifier = Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 16.dp),
             shape = RoundedCornerShape(15),
-            onClick = {reqPermission()},
-            colors = ButtonDefaults.buttonColors(Color(0xFFD9D9D9),contentColor = Color.Black)
+            onClick = { reqPermission() },
+            colors = ButtonDefaults.buttonColors(Color(0xFFD9D9D9), contentColor = Color.Black)
 
         ) {
-            Text(text = "Включить уведомления", fontSize = 30.sp, textAlign = TextAlign.Center, lineHeight = 31.sp)
-        }
             Text(
-                text = "версия\n1.0",
-                fontSize = 20.sp,
-                modifier = Modifier.fillMaxWidth().padding(top = 430.dp),
+                text = "Включить уведомления",
+                fontSize = 30.sp,
                 textAlign = TextAlign.Center,
-                color = Color(127,112,107),
+                lineHeight = 31.sp
             )
+        }
+        Text(
+            text = "версия\n1.0",
+            fontSize = 20.sp,
+            modifier = Modifier.fillMaxWidth().padding(top = 430.dp),
+            textAlign = TextAlign.Center,
+            color = Color(127, 112, 107),
+        )
+
     }
 }
 
@@ -347,13 +391,12 @@ fun AddingScreen(){
 fun CalendarScreen(){
     val СurrentMonth = remember { mutableStateOf(LocalDate.now().monthValue) }
     val MonthNames = listOf("Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь")
+
     Column(modifier = Modifier.fillMaxSize().padding(top = 24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Top) {
         Row(modifier = Modifier.fillMaxWidth(),horizontalArrangement = Arrangement.Center) {
             Box(modifier = Modifier.padding(top = 24.dp).size(300.dp, 50.dp).background(Color(208, 255, 255), shape = RoundedCornerShape(15))) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     IconButton(
                         onClick = {
@@ -367,8 +410,7 @@ fun CalendarScreen(){
                     ) {
                         Image(
                             imageVector = ImageVector.vectorResource(R.drawable.polygon1),
-                            modifier = Modifier.size(30.dp),
-                            contentDescription = "Раннее"
+                            modifier = Modifier.size(30.dp), contentDescription = "Раннее"
                         )
                     }
                     Text(
@@ -391,20 +433,15 @@ fun CalendarScreen(){
                     ) {
                         Image(
                             imageVector = ImageVector.vectorResource(R.drawable.polygon2),
-                            modifier = Modifier.size(30.dp),
-                            contentDescription = "Позднее"
+                            modifier = Modifier.size(30.dp), contentDescription = "Позднее"
                         )
                     }
                 }
             }
         }
-        Box(
-            modifier = Modifier.padding(start = 16.dp, top = 24.dp, end = 16.dp).background(
-                Color(0xFFD9D9D9),
-                shape = RoundedCornerShape(15),
-            )
-        ) {
-
+        Box(modifier = Modifier.padding(start = 16.dp, top = 24.dp, end = 16.dp).background(
+                Color(0xFFD9D9D9), shape = RoundedCornerShape(5),)) {
+            DaysDrawing(СurrentMonth.value-1)
         }
     }
 }
@@ -462,5 +499,59 @@ fun AddingDaysToMonths() {
         }
         year.add(daysList)
     }
+}
+
+@Composable
+fun DaysDrawing(month: Int) {
+    var selectedDay by remember { mutableStateOf(-1) }
+    val rows = (year[month].size + 6) / 7
+    var isPressed by remember { mutableStateOf(false) }
+    var showTasks by remember { mutableStateOf(false) }
+    Column {
+        for (row in 0..rows + 1) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 15.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                for (be in 0 until 5) {
+                    val dayae = row * 5 + be
+                    if (dayae < year[month].size) {
+                        val dayNumber = dayae + 1
+                        Button(
+                            modifier = Modifier.size(67.dp,50.dp),
+                            shape = RoundedCornerShape(15),
+                            onClick = { selectedDay = dayNumber
+                                showTasks = true},
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (selectedDay == dayNumber) { Color(208, 255, 255)
+                                } else { Color(168, 154, 149)},
+                                contentColor = if (selectedDay == dayNumber) { Color( 89, 125, 125)} else { Color.White}
+                            )
+
+                        ) {
+                            Text(
+                                text = (dayae + 1).toString(),
+                                fontSize = 16.sp,
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        if (showTasks) {
+            TasksDrawing(month = 2)
+        }
+
+    }
+}
+
+@Composable
+fun TasksDrawing(month: Int) { //НЕ ЗАБУДЬ ЗАМЕНИТЬ ТО, ЧТО НАДО ПЕРЕДАВАТЬ В ФУНКЦИЮ!!!
+    Image(
+        imageVector = ImageVector.vectorResource(R.drawable.rectangle_4),
+        modifier = Modifier.size(380.dp, 30.dp).padding(start = 18.dp, end = 18.dp), contentDescription = "Полоса"
+    )
 }
 
