@@ -42,6 +42,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,6 +59,7 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.uniflow.ui.theme.UniFlowTheme
@@ -65,6 +67,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,7 +75,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             UniFlowTheme {
-                if (year.isEmpty()) { AddingDaysToMonths()}
+                val year = remember { mutableStateListOf<MutableList<TaskDay>>() }
+                if (year.isEmpty()) { AddingDaysToMonths(year)}
                 val pagerState = rememberPagerState(initialPage = 2, pageCount = { 3 })
                 val coroutineScope = rememberCoroutineScope()
                 Scaffold(
@@ -143,9 +147,9 @@ class MainActivity : ComponentActivity() {
                             .padding(innerPadding)
                     ) { page ->
                         when (page) {
-                            0 -> FrBackgroundYo { SettingsScreen() }
+                            0 -> FrBackgroundYo { SettingsScreen(year) }
                             1 -> FrBackgroundYo { AddingScreen() }
-                            2 -> FrBackgroundYo { CalendarScreen() }
+                            2 -> FrBackgroundYo { CalendarScreen(year = year) }
                         }
                     }
                 }
@@ -186,7 +190,7 @@ fun FrBackgroundYo(content: @Composable () -> Unit){
 }
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(year: MutableList<MutableList<TaskDay>>) {
     var showClearDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val reqPermission = remeNotifPerm { isGranted ->
@@ -388,7 +392,7 @@ fun AddingScreen(){
 }
 
 @Composable
-fun CalendarScreen(){
+fun CalendarScreen(year: MutableList<MutableList<TaskDay>>){
     val СurrentMonth = remember { mutableStateOf(LocalDate.now().monthValue) }
     val MonthNames = listOf("Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь")
 
@@ -441,60 +445,57 @@ fun CalendarScreen(){
         }
         Box(modifier = Modifier.padding(start = 16.dp, top = 24.dp, end = 16.dp).background(
                 Color(0xFFD9D9D9), shape = RoundedCornerShape(5),)) {
-            DaysDrawing(СurrentMonth.value-1)
+            DaysDrawing(СurrentMonth.value-1,year)
         }
     }
 }
 
 //эт классы и тд для 3 экрана
 data class Task(
-    val id: String = "",
+    val id: String = UUID.randomUUID().toString(),
     val textTask: String = "",
     var isCompleted: Boolean = false,
 )
 
 data class TaskDay(
     val idD: Int,
-    val tasks: MutableList<Task> = mutableListOf()
+    val tasks: MutableList<Task> = mutableStateListOf()
 ) {
-
     fun AddTask(task: Task) {
         tasks.add(task)
     }
-
     fun DeleteTask(taskId: String) {
         tasks.removeAll { it.id == taskId }
     }
-
     fun TaskStat(taskId: String) {
         val task = tasks.find { it.id == taskId }
         if (task != null) {
             task.isCompleted = !task.isCompleted
         }
     }
+    fun GetList(): MutableList<Task> {
+        return tasks
+    }
 }
-
-val year: MutableList<List<TaskDay>> = mutableListOf()
 @Composable
-fun AddingDaysToMonths() {
+fun AddingDaysToMonths(year: MutableList<MutableList<TaskDay>>) {
     for (i in 1..12) {
-        val daysList = mutableListOf<TaskDay>()
+        val daysList = remember { mutableStateListOf<TaskDay>() }
         if (i in setOf(1, 3, 5, 7, 8, 10, 12)){
             for (j in 1..31) {
-                val taski = mutableListOf<Task>()
-                daysList.add(TaskDay(idD = j,taski))
+                daysList.add(TaskDay(idD = j))
             }
         }
         else if (i in setOf(4, 6, 9, 11)){
             for (j in 1..30) {
                 val taski = mutableListOf<Task>()
-                daysList.add(TaskDay(idD = j,taski))
+                daysList.add(TaskDay(idD = j))
             }
         }
         else if(i == 2){
             for (j in 1..28) {
                 val taski = mutableListOf<Task>()
-                daysList.add(TaskDay(idD = j,taski))
+                daysList.add(TaskDay(idD = j))
             }
         }
         year.add(daysList)
@@ -502,10 +503,9 @@ fun AddingDaysToMonths() {
 }
 
 @Composable
-fun DaysDrawing(month: Int) {
+fun DaysDrawing(month: Int, year: MutableList<MutableList<TaskDay>>) {
     var selectedDay by remember { mutableStateOf(-1) }
-    val rows = (year[month].size + 6) / 7
-    var isPressed by remember { mutableStateOf(false) }
+    val rows = (year[month].size + 4) / 5
     var showTasks by remember { mutableStateOf(false) }
     Column {
         for (row in 0..rows + 1) {
@@ -541,17 +541,126 @@ fun DaysDrawing(month: Int) {
             }
         }
         if (showTasks) {
-            TasksDrawing(month = 2)
+            TasksDrawing(month,selectedDay, year = year)
         }
-
     }
 }
 
 @Composable
-fun TasksDrawing(month: Int) { //НЕ ЗАБУДЬ ЗАМЕНИТЬ ТО, ЧТО НАДО ПЕРЕДАВАТЬ В ФУНКЦИЮ!!!
+fun TasksDrawing(month2: Int, dayId: Int, year: MutableList<MutableList<TaskDay>>) {
+    var refreshKey by remember { mutableStateOf(0) }
+    var taskToDelete by remember { mutableStateOf<Task?>(null) }
+
+    val added = remember { mutableStateOf(false) }
+    if (!added.value) {
+        year[month2][dayId].AddTask(Task("ye", "Позвонить мамеrtgerger"))
+        year[month2][dayId].AddTask(Task("ye2", "myhrtergegetg мамеrtgerger"))
+        added.value = true
+    }
+    val taskList = remember(refreshKey) {
+        year[month2][dayId].GetList().toList()
+    }
     Image(
         imageVector = ImageVector.vectorResource(R.drawable.rectangle_4),
-        modifier = Modifier.size(380.dp, 30.dp).padding(start = 18.dp, end = 18.dp), contentDescription = "Полоса"
+        modifier = Modifier.size(380.dp, 30.dp).padding(start = 18.dp, end = 18.dp),
+        contentDescription = "Полоса"
     )
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        Text(
+            text = dayId.toString() + ".",
+            fontSize = 40.sp,
+            fontWeight = FontWeight.Bold
+        )
+        var a: Int = 0;
+        for (task in year[month2][dayId].GetList()) {
+            a += 1;
+            Text(
+                text = a.toString() + ") " + task.textTask,
+                fontSize = 30.sp,
+                textDecoration = if (task.isCompleted) {
+                    TextDecoration.LineThrough
+                } else {
+                    TextDecoration.None
+                }
+            )
+            Row(modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End) {
+                Button(
+                    modifier = Modifier.size(70.dp,65.dp).padding(end = 5.dp),
+                    shape = RoundedCornerShape(15),
+                    onClick = { year[month2][dayId].TaskStat(task.id)
+                        refreshKey++},
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (task.isCompleted) {
+                            Color.Gray
+                        } else {
+                            Color(47, 220, 41)
+                        },
+                        contentColor = Color.White
+                    )
+                ) {
+                    if (task.isCompleted) {
+                        Text(
+                            text = "✕",
+                            fontSize = 20.sp,
+                            textAlign = TextAlign.Center,
+                            color = Color.White,
+                            fontWeight = FontWeight.Light
+                        )
+                    } else {
+                        Text(
+                            text = "✓",
+                            fontSize = 20.sp,
+                            textAlign = TextAlign.Center,
+                            color = Color.White,
+                            fontWeight = FontWeight.Light
+                        )
+                    }
+                }
+                Button(
+                    modifier = Modifier.size(65.dp),
+                    shape = RoundedCornerShape(15),
+                    onClick = { taskToDelete = task },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(194, 39, 39),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Image(
+                        imageVector = ImageVector.vectorResource(R.drawable.baseline_delete_outline_24),
+                        modifier = Modifier.size(30.dp),
+                        contentDescription = "Удалить задачу"
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+    if (taskToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { taskToDelete = null },
+            title = { Text("Подтверждение") },
+            text = { Text("Вы уверены, что хотите удалить эту задачу?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        taskToDelete?.let { task ->
+                            year[month2][dayId].DeleteTask(task.id)
+                            refreshKey++
+                        }
+                        taskToDelete = null
+                    }
+                ) {
+                    Text("Да")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { taskToDelete = null }) {
+                    Text("Нет")
+                }
+            }
+        )
+    }
 }
+
 
