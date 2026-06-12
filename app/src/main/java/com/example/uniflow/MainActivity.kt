@@ -1,7 +1,6 @@
 package com.example.uniflow
 
 import android.content.Intent
-//import android.graphics.drawable.Icon
 import androidx.compose.material3.Icon
 import android.net.Uri
 import android.os.Bundle
@@ -76,6 +75,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             UniFlowTheme {
                 val year = remember { mutableStateListOf<MutableList<TaskDay>>() }
+                var calendarRefreshTrigger by remember { mutableStateOf(0) }
                 if (year.isEmpty()) { AddingDaysToMonths(year)}
                 val pagerState = rememberPagerState(initialPage = 2, pageCount = { 3 })
                 val coroutineScope = rememberCoroutineScope()
@@ -148,8 +148,14 @@ class MainActivity : ComponentActivity() {
                     ) { page ->
                         when (page) {
                             0 -> FrBackgroundYo { SettingsScreen(year) }
-                            1 -> FrBackgroundYo { AddingScreen() }
-                            2 -> FrBackgroundYo { CalendarScreen(year = year) }
+                            1 -> FrBackgroundYo {
+                                AddingScreen(year) {
+                                    calendarRefreshTrigger++
+                                }
+                            }
+                            2 -> FrBackgroundYo {
+                                CalendarScreen(year = year, refreshTrigger = calendarRefreshTrigger)
+                            }
                         }
                     }
                 }
@@ -158,8 +164,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable
 //функции для экранов
+@Composable
 fun remeNotifPerm(
     onResult: (Boolean) -> Unit): () -> Unit {
     val launcher = rememberLauncherForActivityResult(
@@ -283,7 +289,9 @@ fun SettingsScreen(year: MutableList<MutableList<TaskDay>>) {
 }
 
 @Composable
-fun AddingScreen(){
+fun AddingScreen(year: MutableList<MutableList<TaskDay>>, onTaskAdded: () -> Unit = {}){
+
+    val context = LocalContext.current
     val currentDate = LocalDate.now()
     val dateFormat = DateTimeFormatter.ofPattern("d MMMM").withLocale(Locale("ru", "RU"))
     val formattedDate = currentDate.format(dateFormat)
@@ -355,30 +363,34 @@ fun AddingScreen(){
                 modifier = Modifier.size(width = 85.dp, height = 65.dp).padding(start = 16.dp),
                 shape = RoundedCornerShape(15),
                 onClick = {
-                    if (DateTask.value.toString().length == 2 && DateTask2.value.toString().length == 2) {
+                    if (DateTask.value.toString().length == 2 && DateTask2.value.toString().length == 2 && year.getOrNull(DateTask2.value.toInt() - 1)?.getOrNull(DateTask.value.toInt() - 1) != null) {
                         UsDate.value = LocalDate.of(2026, DateTask2.value.toInt(), DateTask.value.toInt())
                     }
                 },
-                //КОГДА СДЕЛАЕШЬ ЛИСТЫ, СДЕЛАЙ ПРОВЕРКУ НА СУЩЕСТВОВАНИЕ КНОПКИ ПО АЙДИ!!!!!!!!!!
                 colors = ButtonDefaults.buttonColors(Color(0xFFD9D9D9),contentColor = Color.Black)
             ) {
                 Text(text = "✓", fontSize = 30.sp, textAlign = TextAlign.Center, color = Color(146,146,146), fontWeight = FontWeight.Light)
-                /*Image(
-                    imageVector = ImageVector.vectorResource(R.drawable.galochka3),
-                    modifier = Modifier.size(30.dp),
-                    contentDescription = "Добавить время"
-                )*/
             }
         }
+
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(top = 50.dp)) {
             Button(
                 modifier = Modifier.size(150.dp),
                 shape = RoundedCornerShape(15),
-                onClick = { /* бебебе */ },
+                onClick = {
+                    if (DateTask.value.toString().length == 2 && DateTask2.value.toString().length == 2 && year.getOrNull(DateTask2.value.toInt() - 1)?.getOrNull(DateTask.value.toInt() - 1) != null && UsTask.value.isNotEmpty()) {
+                        year[DateTask2.value.toInt() - 1][DateTask.value.toInt() - 1].AddTask(Task(textTask = UsTask.value))
+                        UsTask.value = ""; DateTask.value = ""; DateTask2.value = "";
+                        Toast.makeText(context, "Задача добавлена!", Toast.LENGTH_SHORT).show()
+                    }
+                    else{
+                        Toast.makeText(context, "Ошибка в дате или задача пуста", Toast.LENGTH_SHORT).show()}
+                },
                 colors = ButtonDefaults.buttonColors(Color(208, 255, 255), contentColor = Color.Black)
             ) {
                 Text(text = "+", fontSize = 100.sp, textAlign = TextAlign.Center, color = Color(146,179,179), fontWeight = FontWeight.Light)
             }
+
         }
         Box(modifier = Modifier.fillMaxSize().padding(start = 125.dp, top = 40.dp, end = 30.dp).background(Color(0xFFD9D9D9))) {
             Text(
@@ -392,7 +404,7 @@ fun AddingScreen(){
 }
 
 @Composable
-fun CalendarScreen(year: MutableList<MutableList<TaskDay>>){
+fun CalendarScreen(year: MutableList<MutableList<TaskDay>>, refreshTrigger: Int){
     val СurrentMonth = remember { mutableStateOf(LocalDate.now().monthValue) }
     val MonthNames = listOf("Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь")
 
@@ -445,7 +457,7 @@ fun CalendarScreen(year: MutableList<MutableList<TaskDay>>){
         }
         Box(modifier = Modifier.padding(start = 16.dp, top = 24.dp, end = 16.dp).background(
                 Color(0xFFD9D9D9), shape = RoundedCornerShape(5),)) {
-            DaysDrawing(СurrentMonth.value-1,year)
+            DaysDrawing(СurrentMonth.value-1,year = year, refreshTrigger = refreshTrigger)
         }
     }
 }
@@ -457,7 +469,7 @@ data class Task(
     var isCompleted: Boolean = false,
 )
 
-data class TaskDay(
+class TaskDay(
     val idD: Int,
     val tasks: MutableList<Task> = mutableStateListOf()
 ) {
@@ -471,16 +483,20 @@ data class TaskDay(
         val task = tasks.find { it.id == taskId }
         if (task != null) {
             task.isCompleted = !task.isCompleted
+            val index = tasks.indexOf(task)
+            if (index != -1) {
+                tasks[index] = task
+            }
         }
     }
     fun GetList(): MutableList<Task> {
         return tasks
     }
 }
-@Composable
+
 fun AddingDaysToMonths(year: MutableList<MutableList<TaskDay>>) {
     for (i in 1..12) {
-        val daysList = remember { mutableStateListOf<TaskDay>() }
+        val daysList = mutableStateListOf<TaskDay>()
         if (i in setOf(1, 3, 5, 7, 8, 10, 12)){
             for (j in 1..31) {
                 daysList.add(TaskDay(idD = j))
@@ -488,13 +504,11 @@ fun AddingDaysToMonths(year: MutableList<MutableList<TaskDay>>) {
         }
         else if (i in setOf(4, 6, 9, 11)){
             for (j in 1..30) {
-                val taski = mutableListOf<Task>()
                 daysList.add(TaskDay(idD = j))
             }
         }
         else if(i == 2){
             for (j in 1..28) {
-                val taski = mutableListOf<Task>()
                 daysList.add(TaskDay(idD = j))
             }
         }
@@ -503,20 +517,21 @@ fun AddingDaysToMonths(year: MutableList<MutableList<TaskDay>>) {
 }
 
 @Composable
-fun DaysDrawing(month: Int, year: MutableList<MutableList<TaskDay>>) {
-    var selectedDay by remember { mutableStateOf(-1) }
-    val rows = (year[month].size + 4) / 5
-    var showTasks by remember { mutableStateOf(false) }
+fun DaysDrawing(month: Int, year: MutableList<MutableList<TaskDay>>, refreshTrigger: Int) {
+    var selectedDay by remember(refreshTrigger) { mutableStateOf(-1) }
+    var showTasks by remember(refreshTrigger) { mutableStateOf(false) }
+
+
     Column {
-        for (row in 0..rows + 1) {
+        for (row in 0..6) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 15.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                for (be in 0 until 5) {
-                    val dayae = row * 5 + be
-                    if (dayae < year[month].size) {
-                        val dayNumber = dayae + 1
+                for (col in 0 until 5) {
+                    val dayIndex = row * 5 + col
+                    if (dayIndex < year[month].size) {
+                        val dayNumber = dayIndex + 1
                         Button(
                             modifier = Modifier.size(67.dp,50.dp),
                             shape = RoundedCornerShape(15),
@@ -530,7 +545,7 @@ fun DaysDrawing(month: Int, year: MutableList<MutableList<TaskDay>>) {
 
                         ) {
                             Text(
-                                text = (dayae + 1).toString(),
+                                text = dayNumber.toString(),
                                 fontSize = 16.sp,
                                 textAlign = TextAlign.Center,
                                 fontWeight = FontWeight.Bold
@@ -540,26 +555,20 @@ fun DaysDrawing(month: Int, year: MutableList<MutableList<TaskDay>>) {
                 }
             }
         }
-        if (showTasks) {
-            TasksDrawing(month,selectedDay, year = year)
+        if (showTasks && selectedDay != -1) {
+            TasksDrawing(month,selectedDay-1, year = year, refreshTrigger = refreshTrigger)
         }
     }
 }
 
 @Composable
-fun TasksDrawing(month2: Int, dayId: Int, year: MutableList<MutableList<TaskDay>>) {
-    var refreshKey by remember { mutableStateOf(0) }
+fun TasksDrawing(month2: Int, dayId: Int, year: MutableList<MutableList<TaskDay>>, refreshTrigger: Int) {
+    var localRefreshTrigger by remember { mutableStateOf(0) }
     var taskToDelete by remember { mutableStateOf<Task?>(null) }
-
-    val added = remember { mutableStateOf(false) }
-    if (!added.value) {
-        year[month2][dayId].AddTask(Task("ye", "Позвонить мамеrtgerger"))
-        year[month2][dayId].AddTask(Task("ye2", "myhrtergegetg мамеrtgerger"))
-        added.value = true
-    }
-    val taskList = remember(refreshKey) {
+    val taskList = remember(refreshTrigger, localRefreshTrigger, year[month2][dayId].tasks.size) {
         year[month2][dayId].GetList().toList()
     }
+
     Image(
         imageVector = ImageVector.vectorResource(R.drawable.rectangle_4),
         modifier = Modifier.size(380.dp, 30.dp).padding(start = 18.dp, end = 18.dp),
@@ -567,7 +576,7 @@ fun TasksDrawing(month2: Int, dayId: Int, year: MutableList<MutableList<TaskDay>
     )
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Text(
-            text = dayId.toString() + ".",
+            text = (dayId+1).toString() + ".",
             fontSize = 40.sp,
             fontWeight = FontWeight.Bold
         )
@@ -589,7 +598,7 @@ fun TasksDrawing(month2: Int, dayId: Int, year: MutableList<MutableList<TaskDay>
                     modifier = Modifier.size(70.dp,65.dp).padding(end = 5.dp),
                     shape = RoundedCornerShape(15),
                     onClick = { year[month2][dayId].TaskStat(task.id)
-                        refreshKey++},
+                        localRefreshTrigger++},
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (task.isCompleted) {
                             Color.Gray
@@ -646,7 +655,7 @@ fun TasksDrawing(month2: Int, dayId: Int, year: MutableList<MutableList<TaskDay>
                     onClick = {
                         taskToDelete?.let { task ->
                             year[month2][dayId].DeleteTask(task.id)
-                            refreshKey++
+                            localRefreshTrigger++
                         }
                         taskToDelete = null
                     }
