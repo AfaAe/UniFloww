@@ -40,6 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -61,22 +62,39 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.lifecycleScope
 import com.example.uniflow.ui.theme.UniFlowTheme
+import com.example.uniflow.ui.theme.ViewModelTask
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
 
 class MainActivity : ComponentActivity() {
+    private lateinit var viewModel: ViewModelTask
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val db = AppDatabase.getDatabase(this)
+        val repository = TaskRepository(db.taskDao())
+        viewModel = ViewModelTask(repository)
         enableEdgeToEdge()
         setContent {
             UniFlowTheme {
                 val year = remember { mutableStateListOf<MutableList<TaskDay>>() }
                 var calendarRefreshTrigger by remember { mutableStateOf(0) }
-                if (year.isEmpty()) { AddingDaysToMonths(year)}
+                var isDataLoaded by remember { mutableStateOf(false) }
+
+                if (year.isEmpty() && !isDataLoaded) {
+                    AddingDaysToMonths(year)
+                    isDataLoaded = true
+                    LaunchedEffect(Unit) {
+                        loadTasksFrombd(year)
+                        calendarRefreshTrigger++
+                    }
+                }
                 val pagerState = rememberPagerState(initialPage = 2, pageCount = { 3 })
                 val coroutineScope = rememberCoroutineScope()
                 Scaffold(
@@ -147,37 +165,37 @@ class MainActivity : ComponentActivity() {
                             .padding(innerPadding)
                     ) { page ->
                         when (page) {
-                            0 -> FrBackgroundYo { SettingsScreen(year) }
+                            0 -> FrBackgroundYo {
+                                SettingsScreen(year = year, viewModel = viewModel, activity = this@MainActivity) }
                             1 -> FrBackgroundYo {
-                                AddingScreen(year) {
-                                    calendarRefreshTrigger++
-                                }
-                            }
+                                AddingScreen(year = year, viewModel = viewModel, activity = this@MainActivity, onTaskAdded = { calendarRefreshTrigger++ }) }
                             2 -> FrBackgroundYo {
-                                CalendarScreen(year = year, refreshTrigger = calendarRefreshTrigger)
-                            }
+                                CalendarScreen(year = year, refreshTrigger = calendarRefreshTrigger) }
                         }
                     }
                 }
             }
         }
     }
-}
-
-//функции для экранов
-@Composable
-fun remeNotifPerm(
-    onResult: (Boolean) -> Unit): () -> Unit {
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean -> onResult(isGranted) }
-    return remember {
-        {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                launcher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-            } else {
-                onResult(true)
+    private fun loadTasksFrombd(year: MutableList<MutableList<TaskDay>>) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                val allTasks = viewModel.getAllTasks()
+                for (task in allTasks) {
+                    val monthIndex = task.month - 1
+                    val dayIndex = task.day - 1
+                    if (monthIndex in year.indices && dayIndex in year[monthIndex].indices) {
+                        year[monthIndex][dayIndex].AddTask(
+                            Task(
+                                id = task.id,
+                                textTask = task.textTask,
+                                isCompleted = task.isCompleted
+                            )
+                        )
+                    }
+                }
             }
+            withContext(Dispatchers.Main) {}
         }
     }
 }
@@ -196,14 +214,14 @@ fun FrBackgroundYo(content: @Composable () -> Unit){
 }
 
 @Composable
-fun SettingsScreen(year: MutableList<MutableList<TaskDay>>) {
+fun SettingsScreen(year: MutableList<MutableList<TaskDay>>, viewModel: ViewModelTask, activity: MainActivity) {
     var showBoxStatic by remember { mutableStateOf(false) }
     var showClearDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(top = 24.dp),
+        modifier = Modifier.fillMaxSize().padding(top = 24.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Top
     ) {
         Button(
@@ -228,6 +246,7 @@ fun SettingsScreen(year: MutableList<MutableList<TaskDay>>) {
                                     taskDay.tasks.clear()
                                 }
                             }
+                            viewModel.deleteAllTasks()
                             Toast.makeText(context, "Задачи очищены", Toast.LENGTH_SHORT).show()
                             showClearDialog = false
                         }
@@ -286,7 +305,7 @@ fun SettingsScreen(year: MutableList<MutableList<TaskDay>>) {
 }
 
 @Composable
-fun AddingScreen(year: MutableList<MutableList<TaskDay>>, onTaskAdded: () -> Unit = {}){
+fun AddingScreen(year: MutableList<MutableList<TaskDay>>, viewModel: ViewModelTask, activity: MainActivity, onTaskAdded: () -> Unit = {}){
 
     val context = LocalContext.current
     val currentDate = LocalDate.now()
@@ -377,6 +396,10 @@ fun AddingScreen(year: MutableList<MutableList<TaskDay>>, onTaskAdded: () -> Uni
                 onClick = {
                     if (DateTask.value.toString().length == 2 && DateTask2.value.toString().length == 2 && year.getOrNull(DateTask2.value.toInt() - 1)?.getOrNull(DateTask.value.toInt() - 1) != null && UsTask.value.isNotEmpty()) {
                         year[DateTask2.value.toInt() - 1][DateTask.value.toInt() - 1].AddTask(Task(textTask = UsTask.value))
+                        activity.lifecycleScope.launch {
+                            viewModel.addTask(Task(textTask = UsTask.value), DateTask2.value.toInt(), DateTask.value.toInt())
+                        }
+                        onTaskAdded()
                         UsTask.value = ""; DateTask.value = ""; DateTask2.value = "";
                         Toast.makeText(context, "Задача добавлена!", Toast.LENGTH_SHORT).show()
                     }
@@ -463,7 +486,7 @@ fun CalendarScreen(year: MutableList<MutableList<TaskDay>>, refreshTrigger: Int)
 data class Task(
     val id: String = UUID.randomUUID().toString(),
     val textTask: String = "",
-    var isCompleted: Boolean = false,
+    var isCompleted: Boolean = false
 )
 
 class TaskDay(
@@ -570,7 +593,7 @@ fun TasksDrawing(month2: Int, dayId: Int, year: MutableList<MutableList<TaskDay>
 
     Image(
         imageVector = ImageVector.vectorResource(R.drawable.rectangle_4),
-        modifier = Modifier.size(380.dp, 30.dp).padding(start = 18.dp, end = 18.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp),
         contentDescription = "Полоса"
     )
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
