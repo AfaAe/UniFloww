@@ -197,15 +197,10 @@ fun FrBackgroundYo(content: @Composable () -> Unit){
 
 @Composable
 fun SettingsScreen(year: MutableList<MutableList<TaskDay>>) {
+    var showBoxStatic by remember { mutableStateOf(false) }
     var showClearDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val reqPermission = remeNotifPerm { isGranted ->
-        if (isGranted) {
-            Toast.makeText(context, "Уведомления включены", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(context, "Уведомления выключены.", Toast.LENGTH_SHORT).show()
-        }
-    }
+
 
     Column(
         modifier = Modifier.fillMaxSize().padding(top = 24.dp),
@@ -266,25 +261,27 @@ fun SettingsScreen(year: MutableList<MutableList<TaskDay>>) {
         Button(
             modifier = Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 16.dp),
             shape = RoundedCornerShape(15),
-            onClick = { reqPermission() },
+            onClick = { showBoxStatic = !showBoxStatic },
             colors = ButtonDefaults.buttonColors(Color(0xFFD9D9D9), contentColor = Color.Black)
 
         ) {
             Text(
-                text = "Включить уведомления",
+                text = "Статистика",
                 fontSize = 30.sp,
                 textAlign = TextAlign.Center,
                 lineHeight = 31.sp
             )
         }
+        Spacer(modifier = Modifier.height(24.dp))
+        if(showBoxStatic){GiveStatistic(year)}
+        Spacer(modifier = Modifier.weight(1f))
         Text(
             text = "версия\n1.0",
             fontSize = 20.sp,
-            modifier = Modifier.fillMaxWidth().padding(top = 430.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
             textAlign = TextAlign.Center,
             color = Color(127, 112, 107),
         )
-
     }
 }
 
@@ -313,7 +310,7 @@ fun AddingScreen(year: MutableList<MutableList<TaskDay>>, onTaskAdded: () -> Uni
             fontWeight = FontWeight.Light
         )
         Text(
-            text = "Оповестить\n\n$formattedDate2",
+            text = "Добавить на\n\n$formattedDate2",
             fontSize = 45.sp,
             modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
             textAlign = TextAlign.Center,
@@ -569,17 +566,29 @@ fun TasksDrawing(month2: Int, dayId: Int, year: MutableList<MutableList<TaskDay>
         year[month2][dayId].GetList().toList()
     }
 
+    val completedCount = taskList.count { it.isCompleted }
+
     Image(
         imageVector = ImageVector.vectorResource(R.drawable.rectangle_4),
         modifier = Modifier.size(380.dp, 30.dp).padding(start = 18.dp, end = 18.dp),
         contentDescription = "Полоса"
     )
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        Text(
-            text = (dayId+1).toString() + ".",
-            fontSize = 40.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(
+                text = (dayId + 1).toString() + ".",
+                fontSize = 40.sp,
+                fontWeight = FontWeight.Bold
+            )
+            if (year[month2][dayId].tasks.isNotEmpty()) {
+                Text(
+                    text = completedCount.toString() + "/" + year[month2][dayId].tasks.size.toString(),
+                    fontSize = 35.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.End
+                )
+            }
+        }
         var a: Int = 0;
         for (task in year[month2][dayId].GetList()) {
             a += 1;
@@ -669,6 +678,37 @@ fun TasksDrawing(month2: Int, dayId: Int, year: MutableList<MutableList<TaskDay>
                 }
             }
         )
+    }
+}
+
+@Composable
+fun GiveStatistic(year: MutableList<MutableList<TaskDay>>){
+    val CurrentMonth = LocalDate.now().monthValue - 1
+    var totalTasks = 0
+    var completedTasks = 0
+    var totalMonth = 0
+    var totalCmplMonth = 0;
+    year.forEachIndexed { ind, month ->
+        month.forEach { daytask ->
+            if(ind == CurrentMonth){
+                totalMonth += daytask.tasks.size
+                totalCmplMonth += daytask.tasks.count { it.isCompleted }
+            }
+            totalTasks += daytask.tasks.size
+            completedTasks += daytask.tasks.count { it.isCompleted }
+        }
+    }
+
+    Box(modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth().background(Color(0xFFD9D9D9), shape = RoundedCornerShape(15))) {
+        Column {
+            Box(modifier = Modifier.fillMaxWidth().height(30.dp).background(Color(208, 255, 255))){}
+            Text(
+                text = "За год: " + completedTasks.toString() + "/" + totalTasks.toString() + "\n\nЗа месяц:" + totalCmplMonth.toString() + "/" + totalMonth.toString(),
+                fontSize = 30.sp,
+                color = Color.Black,
+                fontWeight = FontWeight.Light
+            )
+        }
     }
 }
 
