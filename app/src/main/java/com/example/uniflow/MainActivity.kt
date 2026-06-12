@@ -541,7 +541,6 @@ fun DaysDrawing(month: Int, year: MutableList<MutableList<TaskDay>>, refreshTrig
     var selectedDay by remember(refreshTrigger) { mutableStateOf(-1) }
     var showTasks by remember(refreshTrigger) { mutableStateOf(false) }
 
-
     Column {
         for (row in 0..6) {
             Row(
